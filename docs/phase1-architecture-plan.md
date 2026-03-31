@@ -655,6 +655,20 @@ Nothing else exists. Everything in this plan is new code.
 
 ---
 
+## Implementation Deviations (구현 시 변경사항)
+
+아키텍처 플랜 작성 후 실제 구현 과정에서 아래 항목이 변경되었습니다.
+상세 내역은 `docs/phase1-implementation-plan.md` 참조.
+
+| 플랜 | 실제 구현 | 이유 |
+|------|----------|------|
+| Context + useReducer (`hooks/useTacticState.ts`) | **Zustand** (`stores/useTacticStore.ts`) | 보일러플레이트 감소, persist 미들웨어로 localStorage 자동 처리, 외부 `getState()` 접근 (재생 엔진 rAF 루프에서 필요) |
+| `providers/TacticProvider.tsx` | 제거 | Zustand 전역 스토어이므로 Context Provider 불필요 |
+| `lib/storage.ts` + `__tests__/storage.test.ts` | 제거 | Zustand persist 미들웨어가 localStorage 저장/로드 자동 처리 |
+| 모바일 하단 툴바 (sm: 56px) | 모든 화면 상단 툴바 | Phase 1 프로토타입에서는 상단 고정으로 충분. Phase 3에서 반응형 개선 예정 (TODOS.md #5) |
+
+---
+
 ## TODOS (to create in TODOS.md)
 
 1. **JSON export/import for cross-device sharing**
