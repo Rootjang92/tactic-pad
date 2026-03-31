@@ -13,6 +13,14 @@ claude 기반으로 이야기할 때에는 한글로 표시하기.
 /setup-browser-cookies, /setup-deploy, /retro, /investigate, /document-release, /codex, /cso,
 /autoplan, /careful, /freeze, /guard, /unfreeze, /gstack-upgrade
 
+## 문서 규칙
+
+모든 설계 문서, 아키텍처 플랜, 리뷰 결과는 `docs/` 폴더에 작성하고 참고한다.
+- 디자인 문서: `docs/design-doc.md`
+- 아키텍처 플랜: `docs/phase1-architecture-plan.md`
+- 새 문서 작성 시 `docs/` 안에 생성. `~/.claude/plans/`나 `~/.gstack/projects/`가 아닌 프로젝트 내 `docs/`를 사용.
+- 기존 문서 수정 시에도 `docs/` 내 파일을 직접 수정.
+
 ## Skill routing
 
 When the user's request matches an available skill, ALWAYS invoke it using the Skill
