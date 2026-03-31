@@ -184,6 +184,7 @@ export const useTacticStore = create<TacticStore>()(
         project: state.project,
         currentKeyframeIndex: state.currentKeyframeIndex,
       }),
+      skipHydration: true,
     }
   )
 );

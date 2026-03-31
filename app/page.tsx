@@ -1,65 +1,162 @@
-import Image from "next/image";
+"use client";
+
+import { useRef, useEffect, useState, useCallback } from "react";
+import dynamic from "next/dynamic";
+import { useCanvasSize } from "@/hooks/useCanvasSize";
+import { usePlayback } from "@/hooks/usePlayback";
+import { useAutoSave } from "@/hooks/useAutoSave";
+import { useTacticStore } from "@/stores/useTacticStore";
+import Toolbar from "@/components/controls/Toolbar";
+import Timeline from "@/components/timeline/Timeline";
+import Toast from "@/components/Toast";
+import { LABELS, APP_BG } from "@/lib/constants";
+
+// Hydrate zustand persist store on client mount
+if (typeof window !== "undefined") {
+  useTacticStore.persist.rehydrate();
+}
+
+const TacticBoard = dynamic(() => import("@/components/board/TacticBoard"), {
+  ssr: false,
+  loading: () => (
+    <div
+      style={{
+        flex: 1,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: APP_BG,
+      }}
+    >
+      <div
+        style={{
+          width: "80%",
+          aspectRatio: "1.2",
+          background: "#2d8a4e22",
+          borderRadius: 4,
+          border: "2px dashed #3a3a3a",
+        }}
+      />
+    </div>
+  ),
+});
 
 export default function Home() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { width, height } = useCanvasSize(containerRef);
+  const playback = usePlayback();
+  const saveStatus = useAutoSave();
+  const undo = useTacticStore((s) => s.undo);
+  const redo = useTacticStore((s) => s.redo);
+  const undoStack = useTacticStore((s) => s.undoStack);
+  const redoStack = useTacticStore((s) => s.redoStack);
+  const selectedTokenId = useTacticStore((s) => s.selectedTokenId);
+  const dispatch = useTacticStore((s) => s.dispatch);
+
+  const [showTooltip, setShowTooltip] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !localStorage.getItem("tacticpad-tooltip-seen");
+  });
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // First-run tooltip auto-hide
+  useEffect(() => {
+    if (!showTooltip) return;
+    const timer = setTimeout(() => {
+      setShowTooltip(false);
+      localStorage.setItem("tacticpad-tooltip-seen", "1");
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [showTooltip]);
+
+  // Keyboard shortcuts
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === "z" && (e.ctrlKey || e.metaKey) && e.shiftKey) {
+        e.preventDefault();
+        redo();
+      } else if (e.key === "z" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        undo();
+      } else if (e.key === " ") {
+        e.preventDefault();
+        if (playback.isPlaying) playback.pause();
+        else playback.play();
+      } else if (e.key === "Delete" || e.key === "Backspace") {
+        if (selectedTokenId && !playback.isPlaying) {
+          dispatch({ type: "REMOVE_TOKEN", tokenId: selectedTokenId });
+        }
+      }
+    },
+    [undo, redo, playback, selectedTokenId, dispatch],
+  );
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+        background: APP_BG,
+        overflow: "hidden",
+      }}
+    >
+      {/* Toolbar */}
+      <Toolbar
+        isPlaying={playback.isPlaying}
+        canUndo={undoStack.length > 0}
+        canRedo={redoStack.length > 0}
+        onUndo={undo}
+        onRedo={redo}
+        saveStatus={saveStatus}
+      />
+
+      {/* Canvas container */}
+      <div
+        ref={containerRef}
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          overflow: "hidden",
+          position: "relative",
+        }}
+      >
+        {width > 0 && height > 0 && <TacticBoard width={width} height={height} />}
+
+        {/* First-run tooltip */}
+        {showTooltip && (
+          <div
+            style={{
+              position: "absolute",
+              bottom: 16,
+              left: "50%",
+              transform: "translateX(-50%)",
+              background: "rgba(0,0,0,0.75)",
+              color: "#a1a1aa",
+              padding: "8px 16px",
+              borderRadius: 8,
+              fontSize: 13,
+              pointerEvents: "none",
+              transition: "opacity 500ms",
+            }}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+            {LABELS.firstRunTooltip}
+          </div>
+        )}
+      </div>
+
+      {/* Timeline */}
+      <Timeline playback={playback} />
+
+      {/* Toast */}
+      {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage(null)} />}
     </div>
   );
 }

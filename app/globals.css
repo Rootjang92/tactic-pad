@@ -1,8 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #1a1a1a;
+  --foreground: #ffffff;
+  --app-bg: #1a1a1a;
+  --toolbar-bg: #242424;
+  --timeline-bg: #1f1f1f;
+  --surface: #2a2a2a;
+  --border: #3a3a3a;
 }
 
 @theme inline {
@@ -12,15 +17,19 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body {
+  background: var(--app-bg);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, sans-serif;
+  margin: 0;
+  overflow: hidden;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: default !important;
 }
