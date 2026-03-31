@@ -27,6 +27,7 @@ export function usePlayback(): PlaybackControls {
   const rafRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
   const fromIndexRef = useRef<number>(0);
+  const speedRef = useRef<0.5 | 1 | 2>(1);
 
   const cancelAnimation = useCallback(() => {
     if (rafRef.current !== null) {
@@ -50,10 +51,7 @@ export function usePlayback(): PlaybackControls {
 
     const animate = (now: number) => {
       const { project } = useTacticStore.getState();
-      const speed = useTacticStore.getState() as unknown as { playbackSpeed?: number };
-      // Read speed from local state via closure isn't reactive, use ref pattern instead
-      const currentSpeed = playbackSpeed;
-      const duration = KEYFRAME_DURATION_MS / currentSpeed;
+      const duration = KEYFRAME_DURATION_MS / speedRef.current;
       const elapsed = now - startTimeRef.current;
       const fromIdx = fromIndexRef.current;
       const toIdx = fromIdx + 1;
@@ -87,7 +85,7 @@ export function usePlayback(): PlaybackControls {
 
     cancelAnimation();
     rafRef.current = requestAnimationFrame(animate);
-  }, [cancelAnimation, playbackSpeed]);
+  }, [cancelAnimation]);
 
   const pause = useCallback(() => {
     cancelAnimation();
@@ -114,7 +112,9 @@ export function usePlayback(): PlaybackControls {
   const cycleSpeed = useCallback(() => {
     setPlaybackSpeed((prev) => {
       const idx = SPEED_CYCLE.indexOf(prev);
-      return SPEED_CYCLE[(idx + 1) % SPEED_CYCLE.length];
+      const next = SPEED_CYCLE[(idx + 1) % SPEED_CYCLE.length];
+      speedRef.current = next;
+      return next;
     });
   }, []);
 

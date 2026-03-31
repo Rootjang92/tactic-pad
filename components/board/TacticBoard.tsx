@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useRef } from "react";
 import type Konva from "konva";
+import type { Position } from "@/lib/types";
 
 const Stage = dynamic(() => import("react-konva").then((m) => m.Stage), {
   ssr: false,
@@ -27,9 +28,16 @@ const TrailLayer = dynamic(() => import("./TrailLayer"), { ssr: false });
 interface TacticBoardProps {
   width: number;
   height: number;
+  isPlaying?: boolean;
+  interpolatedPositions?: Record<string, Position> | null;
 }
 
-export default function TacticBoard({ width, height }: TacticBoardProps) {
+export default function TacticBoard({
+  width,
+  height,
+  isPlaying = false,
+  interpolatedPositions = null,
+}: TacticBoardProps) {
   const stageRef = useRef<Konva.Stage>(null);
 
   return (
@@ -39,8 +47,18 @@ export default function TacticBoard({ width, height }: TacticBoardProps) {
     >
       <Stage ref={stageRef} width={width} height={height}>
         <FieldLayer width={width} height={height} />
-        <TrailLayer width={width} height={height} />
-        <TokenLayer width={width} height={height} />
+        <TrailLayer
+          width={width}
+          height={height}
+          isPlaying={isPlaying}
+          interpolatedPositions={interpolatedPositions}
+        />
+        <TokenLayer
+          width={width}
+          height={height}
+          isPlaying={isPlaying}
+          interpolatedPositions={interpolatedPositions}
+        />
       </Stage>
     </div>
   );

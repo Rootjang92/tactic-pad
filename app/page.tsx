@@ -128,7 +128,14 @@ export default function Home() {
           position: "relative",
         }}
       >
-        {width > 0 && height > 0 && <TacticBoard width={width} height={height} />}
+        {width > 0 && height > 0 && (
+          <TacticBoard
+            width={width}
+            height={height}
+            isPlaying={playback.isPlaying}
+            interpolatedPositions={playback.interpolatedPositions}
+          />
+        )}
 
         {/* First-run tooltip */}
         {showTooltip && (
