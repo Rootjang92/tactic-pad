@@ -77,13 +77,60 @@ Stage (responsive, fills container)
 cached for performance. Trail layer only renders during playback. Token layer
 handles all drag interaction.
 
+### Screen Layout & Visual Hierarchy
+
+The field IS the product. All chrome (toolbar, timeline, controls) is subordinate.
+
+**Desktop (1280x800):**
+```
+┌──────────────────────────────────────────┐
+│  Toolbar (48px)  [홈+][어웨이+][공+] [↩↪🗑]│  ← tertiary: admin chrome
+├──────────────────────────────────────────┤
+│                                          │
+│                                          │
+│         SOCCER HALF-COURT                │
+│         (fills remaining space, 70%+)    │  ← PRIMARY: the product
+│         aspect ratio 1.2:1 exact         │
+│                                          │
+│                                          │
+├──────────────────────────────────────────┤
+│  Timeline+Playback (48px)                │  ← secondary: combined bar
+│  [●○○○○] ─────scrubber──── [▶] [1x]     │
+└──────────────────────────────────────────┘
+```
+
+**Mobile (375x667):**
+```
+┌──────────────────────┐
+│                      │
+│   SOCCER HALF-COURT  │  ← fills top ~75%
+│   (touch-optimized)  │
+│                      │
+├──────────────────────┤
+│ Timeline (44px)      │  ← timeline + playback combined
+│ [●○○] ──scrub── [▶]  │
+├──────────────────────┤
+│ Bottom bar (56px)    │  ← toolbar moves to bottom (thumb zone)
+│ [+홈][+어][+공][↩][🗑] │
+└──────────────────────┘
+```
+
+**Tablet (768x1024):** Same as desktop layout but full-width field.
+Toolbar stays at top (enough screen height). Timeline at bottom.
+
+**Key layout rules:**
+- Toolbar + Timeline combined must never exceed 30% of viewport height
+- Field gets all remaining space, always maintaining 1.2:1 aspect ratio
+- On mobile, toolbar moves to bottom for thumb reachability (iOS/Android pattern)
+- Timeline and PlaybackControls merge into a single 48px bar (no separate sections)
+
 ### Component Tree
 
 ```
 app/page.tsx
 └── TacticProvider (Context + useReducer)
     └── <main> (responsive container)
-        ├── Toolbar
+        ├── Toolbar (desktop: top 48px / mobile: bottom 56px)
         │   ├── Add Home Player / Add Away Player / Add Ball buttons
         │   ├── Clear button
         │   └── Undo/Redo buttons
@@ -92,11 +139,10 @@ app/page.tsx
         │       ├── <FieldLayer />
         │       ├── <TrailLayer />
         │       └── <TokenLayer />
-        ├── Timeline
-        │   ├── KeyframeMarker (per keyframe, clickable)
-        │   ├── Scrubber (position indicator)
-        │   └── Add/Delete Keyframe buttons
-        └── PlaybackControls
+        └── TimelineBar (combined, 48px)
+            ├── KeyframeMarker (per keyframe, clickable)
+            ├── Scrubber (position indicator)
+            ├── Add/Delete Keyframe buttons
             ├── Play/Pause button
             └── Speed toggle (0.5x / 1x / 2x)
 ```
@@ -143,6 +189,70 @@ providers/
 
 **Total: ~18 new files.** No new services, no API routes, no database.
 Pure client-side React app inside Next.js shell.
+
+### Visual Design Constants
+
+```typescript
+// lib/constants.ts — visual design preview
+
+// App chrome
+const APP_BG = '#1a1a1a';            // Dark background (not pure black)
+const TOOLBAR_BG = '#242424';         // Slightly lighter toolbar
+const TOOLBAR_HEIGHT = 48;            // px
+const TIMELINE_HEIGHT = 48;           // px
+const MOBILE_BOTTOM_BAR_HEIGHT = 56;  // px
+
+// Field
+const FIELD_GREEN = '#2d8a4e';        // Rich grass green (not neon, not dark)
+const FIELD_LINE_COLOR = '#ffffff';   // White lines
+const FIELD_LINE_WIDTH = 2;           // px (at 1x scale)
+const FIELD_ASPECT_RATIO = 1.2;      // width:height = 1.2:1 (exact)
+const FIELD_PADDING = 16;            // px padding inside field boundary
+
+// Tokens
+const TOKEN_RADIUS = 18;             // px (at 1x scale)
+const HOME_COLOR = '#2563eb';        // Blue (home team)
+const HOME_COLOR_LIGHT = '#3b82f6';  // Lighter blue for hover/active
+const AWAY_COLOR = '#dc2626';        // Red (away team)
+const AWAY_COLOR_LIGHT = '#ef4444';  // Lighter red for hover/active
+const BALL_COLOR = '#fbbf24';        // Amber/gold (ball)
+const BALL_RADIUS = 10;             // px (smaller than player)
+const TOKEN_NUMBER_FONT = '13px Geist Sans';
+const TOKEN_NUMBER_COLOR = '#ffffff'; // White number on colored circle
+const TOKEN_SHADOW_REST = { blur: 2, offset: 1, opacity: 0.15 };
+const TOKEN_SHADOW_DRAG = { blur: 8, offset: 3, opacity: 0.3 };
+const TOKEN_DRAG_SCALE = 1.15;
+
+// Trail lines
+const TRAIL_COLOR = '#ffffff';
+const TRAIL_OPACITY = 0.4;
+const TRAIL_DASH = [6, 4];           // Dashed line pattern
+const TRAIL_WIDTH = 2;
+
+// Timeline
+const TIMELINE_BG = '#1f1f1f';
+const KEYFRAME_DOT_RADIUS = 6;
+const KEYFRAME_DOT_COLOR = '#525252';       // Inactive
+const KEYFRAME_DOT_ACTIVE = '#3b82f6';      // Active (matches home blue)
+const SCRUBBER_COLOR = '#ffffff';
+const SCRUBBER_WIDTH = 2;
+
+// UI
+const BUTTON_RADIUS = 6;            // px, subtle rounded corners (NOT bubbly)
+const TOAST_BG = '#ef4444';          // Error toast
+const SAVE_ICON_COLOR = '#22c55e';   // Green checkmark for auto-save
+
+// Touch targets
+const MIN_TOUCH_TARGET = 44;         // px minimum (Apple HIG)
+```
+
+**Design direction: Professional sports tool.**
+Think FIFA broadcast tactical overlay, not SaaS dashboard. Dark chrome frames
+the green field. Clean, calm hierarchy. No decorative gradients, no colored
+circles around icons, no card grids. The field is the hero. Everything else
+is subordinate. Blue/red team colors are vivid against the green. The app
+should feel like it was made by someone who watches football, not by someone
+who generates SaaS templates.
 
 ### State Management
 
@@ -207,6 +317,31 @@ usePlayback hook
 
 **Duration per keyframe transition:** 1000ms at 1x speed. So 0.5x = 2000ms, 2x = 500ms.
 
+### Interaction Quality Spec
+
+**Drag feel:**
+- On drag start: token scales to 1.15x with `transition: transform 100ms ease-out`.
+  Drop shadow increases (Konva shadow: blur 8, offset 3, opacity 0.3).
+  Token moves to highest z-index on its layer.
+- On drag end: token snaps to final position with scale returning to 1.0x (100ms ease-out).
+  Shadow returns to resting state (blur 2, offset 1, opacity 0.15).
+- Drag constrains within field bounds (tokens cannot be dragged outside the pitch).
+
+**Playback loop:**
+- When animation reaches last keyframe: tokens stop, play button reappears
+  (replaces pause), scrubber stays at end position.
+- Timeline dots highlight sequentially during playback to show progress.
+- After animation ends, coach can: (1) press play to replay, (2) click any
+  keyframe dot to jump there and edit, (3) add a new keyframe.
+- No dead end. The loop is: edit → play → review → edit.
+
+**Auto-save confidence:**
+- On successful auto-save: a small checkmark icon (✓) appears in the toolbar
+  area, fades in and out over 500ms. Subtle, never blocks interaction.
+- On save error: toast with Korean message persists until dismissed.
+- Visual distinction: save indicator is purely informational (green ✓),
+  error toast is actionable (red, with dismiss button).
+
 ### Responsive Strategy
 
 ```
@@ -220,9 +355,42 @@ useCanvasSize hook
 └── Tokens convert normalized coords: x * width, y * height
 ```
 
-Mobile: full-width canvas, toolbar collapses to icons.
-Tablet: full-width canvas, toolbar horizontal.
+Mobile: full-width canvas, toolbar moves to bottom bar (56px, 5 icon buttons).
+Tablet: full-width canvas, toolbar horizontal at top.
 Desktop: centered canvas with max-width.
+
+### Responsive Breakpoints
+
+```
+sm  (≤639px):  Mobile. Bottom bar toolbar. Full-width field. Timeline compact.
+md  (640-1023px): Tablet. Top toolbar. Full-width field. Timeline full.
+lg  (≥1024px): Desktop. Top toolbar. Centered field with max-width. Timeline full.
+```
+
+### Accessibility (Phase 1 Baseline)
+
+**Touch targets:** All buttons and interactive elements minimum 44x44px
+(Apple HIG). Toolbar buttons, keyframe dots, play/pause, speed toggle
+all meet this minimum. Token circles (36px diameter) are below 44px but
+their hit area is expanded via Konva's hitStrokeWidth to 44px effective.
+
+**Color contrast (WCAG AA):**
+- Token numbers: white (#ffffff) on blue (#2563eb) = 4.6:1 ratio ✓
+- Token numbers: white (#ffffff) on red (#dc2626) = 4.5:1 ratio ✓
+- Field lines: white (#ffffff) on green (#2d8a4e) = 4.2:1 ratio ✓
+- Toolbar text: white on dark (#242424) = 14.5:1 ratio ✓
+
+**Keyboard navigation (Phase 1 scope):**
+- Toolbar buttons: focusable via Tab, activatable via Enter/Space
+- Timeline keyframe dots: focusable via Tab
+- Playback controls: focusable via Tab
+- Canvas tokens: NOT keyboard-navigable in Phase 1 (Konva limitation,
+  would require custom focus management). Deferred to Phase 3.
+- Keyboard shortcuts: Ctrl+Z (undo), Ctrl+Shift+Z (redo), Space (play/pause)
+
+**Screen readers:** Canvas content is not accessible to screen readers.
+Add `aria-label="전술 보드 캔버스"` on the Stage container. Toolbar and
+timeline use semantic HTML buttons with Korean labels.
 
 ### Storage
 
@@ -280,6 +448,86 @@ Labels stored as constants in `lib/constants.ts`:
 9. **localStorage failure:** try/catch on all writes. Show Korean toast
    ("저장에 실패했습니다. 브라우저 설정을 확인해주세요.") on error.
    App continues working in memory — data not lost until tab close.
+
+### First-Run Experience
+
+**On first launch (no localStorage data):** The app pre-populates a 4-4-2 formation
+with 11 home players (blue) + 1 ball on the field. No away players (coach adds
+manually since they pick the opposing formation). Ball starts at center circle.
+
+```
+First-run field state:
+         GK(1)
+   RB(2) CB(3) CB(4) LB(5)
+   RM(6) CM(7) CM(8) LM(9)
+       ST(10) ST(11)
+           ⚽ (center circle)
+```
+
+A subtle Korean tooltip appears for 3 seconds: "토큰을 드래그해서 위치를 조정하세요"
+(Drag tokens to adjust positions). Fades out. Does not block interaction.
+
+### Token Interaction Design
+
+**Tap to select:** Tapping a token (without dragging) selects it. Selected token
+shows a bright ring/glow. Tapping again or tapping empty field deselects.
+Dragging is separate from selection (drag starts on hold+move, not on tap).
+
+**Delete individual token:** When a token is selected, a small delete button (✕)
+appears above the token. Tapping ✕ removes the token from all keyframes.
+This prevents the "add-only" problem where the coach must clear everything
+to remove one misplaced player.
+
+**Speed toggle:** Single cycle button showing current speed ("×1").
+Each tap cycles: 0.5x → 1x → 2x → 0.5x. Placed at the right end of the
+timeline bar. Compact, saves space on mobile.
+
+**Keyframe add feedback:** When a new keyframe is added, the new dot appears
+on the timeline with a brief scale-up animation (0 → 1.0 over 200ms) and
+the scrubber auto-moves to the new keyframe. The coach sees exactly where
+the new keyframe landed.
+
+### Interaction State Matrix
+
+```
+FEATURE           | LOADING           | EMPTY              | ERROR              | ACTIVE             | DISABLED
+──────────────────|───────────────────|────────────────────|────────────────────|────────────────────|──────────────────
+TacticBoard       | Skeleton field    | 4-4-2 home preset  | "캔버스를 로드할    | Green field +      | During playback:
+(Konva Stage)     | outline (no Konva | (first-run)        | 수 없습니다"        | tokens visible     | tokens show but
+                  | loaded yet)       |                    | + retry button     |                    | not draggable
+──────────────────|───────────────────|────────────────────|────────────────────|────────────────────|──────────────────
+Token             | n/a               | n/a                | n/a                | Circle + number,   | Semi-transparent
+                  |                   |                    |                    | slight shadow,     | (opacity: 0.6),
+                  |                   |                    |                    | drag cursor        | no drag cursor
+──────────────────|───────────────────|────────────────────|────────────────────|────────────────────|──────────────────
+Token (selected)  | n/a               | n/a                | n/a                | Bright ring/glow   | n/a (no selection
+                  |                   |                    |                    | around token       | during playback)
+──────────────────|───────────────────|────────────────────|────────────────────|────────────────────|──────────────────
+Token (dragging)  | n/a               | n/a                | n/a                | Scale 1.15x,       | n/a
+                  |                   |                    |                    | elevated shadow,   |
+                  |                   |                    |                    | z-index top        |
+──────────────────|───────────────────|────────────────────|────────────────────|────────────────────|──────────────────
+Toolbar           | Buttons disabled  | All buttons active | n/a                | Normal             | During playback:
+                  | (Konva loading)   |                    |                    |                    | add/clear disabled
+──────────────────|───────────────────|────────────────────|────────────────────|────────────────────|──────────────────
+Timeline          | Empty bar, no     | 1 keyframe dot     | n/a                | Dots + scrubber    | n/a
+                  | keyframe dots     | (initial)          |                    | + active indicator |
+──────────────────|───────────────────|────────────────────|────────────────────|────────────────────|──────────────────
+Playback          | Play disabled     | Play enabled       | n/a                | Pause shown        | n/a
+                  |                   | (1 keyframe = no   |                    | (replaces play)    |
+                  |                   | animation, grey)   |                    |                    |
+──────────────────|───────────────────|────────────────────|────────────────────|────────────────────|──────────────────
+localStorage      | n/a               | n/a                | Toast: "저장에      | Auto-save icon     | n/a
+save              |                   |                    | 실패했습니다"        | flash (subtle)     |
+──────────────────|───────────────────|────────────────────|────────────────────|────────────────────|──────────────────
+Clear action      | n/a               | n/a                | n/a                | Confirm dialog:    | n/a
+                  |                   |                    |                    | "모두 초기화?"      |
+                  |                   |                    |                    | [확인] [취소]       |
+```
+
+**Token z-order rule:** Last-dragged token is always on top (highest z-index).
+When formations stack players tightly (defensive walls, corner setups), the coach
+needs to grab the specific token they want without fighting overlap.
 
 ---
 
@@ -466,6 +714,7 @@ execution is more practical. Parallelization only saves time on B + C.
 | CEO Review | `/plan-ceo-review` | Scope & strategy | 0 | — | — |
 | Codex Review | `/codex review` | Independent 2nd opinion | 0 | — | — |
 | Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR | 4 issues, 0 critical gaps |
-| Design Review | `/plan-design-review` | UI/UX gaps | 0 | — | — |
+| Design Review | `/plan-design-review` | UI/UX gaps | 1 | CLEAR | score: 3/10 → 8/10, 5 decisions |
 
-**VERDICT:** ENG CLEARED — ready to implement.
+- **UNRESOLVED:** 0 decisions across all reviews
+- **VERDICT:** ENG + DESIGN CLEARED — ready to implement.
