@@ -4,6 +4,8 @@ Use the `/browse` skill from gstack for all web browsing. Never use `mcp__claude
 
 If gstack skills aren't working, run `cd .claude/skills/gstack && ./setup` to build the binary and register skills.
 
+claude 기반으로 이야기할 때에는 한글로 표시하기.
+
 ### Available skills
 
 /office-hours, /plan-ceo-review, /plan-eng-review, /plan-design-review, /design-consultation,
@@ -18,6 +20,7 @@ tool as your FIRST action. Do NOT answer directly, do NOT use other tools first.
 The skill has specialized workflows that produce better results than ad-hoc answers.
 
 Key routing rules:
+
 - Product ideas, "is this worth building", brainstorming → invoke office-hours
 - Bugs, errors, "why is this broken", 500 errors → invoke investigate
 - Ship, deploy, push, create PR → invoke ship
