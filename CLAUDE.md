@@ -21,6 +21,12 @@ claude 기반으로 이야기할 때에는 한글로 표시하기.
 - 새 문서 작성 시 `docs/` 안에 생성. `~/.claude/plans/`나 `~/.gstack/projects/`가 아닌 프로젝트 내 `docs/`를 사용.
 - 기존 문서 수정 시에도 `docs/` 내 파일을 직접 수정.
 
+## Design System
+Always read DESIGN.md before making any visual or UI decisions.
+All font choices, colors, spacing, and aesthetic direction are defined there.
+Do not deviate without explicit user approval.
+In QA mode, flag any code that doesn't match DESIGN.md.
+
 ## Skill routing
 
 When the user's request matches an available skill, ALWAYS invoke it using the Skill

@@ -1,4 +1,4 @@
-import type { Position } from './types';
+import type { Position } from "./types";
 
 /**
  * Linearly interpolate between two sets of token positions.
@@ -10,7 +10,7 @@ import type { Position } from './types';
 export function interpolatePositions(
   from: Record<string, Position>,
   to: Record<string, Position>,
-  progress: number
+  progress: number,
 ): Record<string, Position> {
   const clamped = Math.max(0, Math.min(1, progress));
   const allIds = new Set([...Object.keys(from), ...Object.keys(to)]);
