@@ -25,3 +25,9 @@
    - 아키텍처 플랜 명세: 모바일(sm)에서 툴바가 하단 56px로 이동 (thumb zone).
    - 현재 구현: 모든 화면에서 툴바 상단 고정.
    - Phase 1 프로토타입에서는 상단 고정으로 충분. Phase 3 MVP에서 반응형 개선.
+
+6. **@serwist/next + Next.js 16 RSC 캐싱 전략 상세화**
+   - Service Worker가 React Server Component payload를 잘못 캐싱하면 클라이언트 네비게이션이 깨질 수 있음.
+   - Phase 3 구현 시 @serwist/next 문서를 확인하여 precache 대상, RSC payload 처리, 라우트별 캐싱 전략을 상세히 정의해야 함.
+   - Outside voice (2026-04-01 eng review)에서 지적된 사항.
+   - Depends on: Phase 3 PWA 구현 시점
