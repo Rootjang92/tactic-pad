@@ -20,9 +20,11 @@ interface ToolbarProps {
   onUndo: () => void;
   onRedo: () => void;
   saveStatus: "idle" | "saving" | "saved" | "error";
+  projectName?: string;
+  onBack?: () => void;
 }
 
-export default function Toolbar({ isPlaying, canUndo, canRedo, onUndo, onRedo, saveStatus }: ToolbarProps) {
+export default function Toolbar({ isPlaying, canUndo, canRedo, onUndo, onRedo, saveStatus, projectName, onBack }: ToolbarProps) {
   const dispatch = useTacticStore((s) => s.dispatch);
   const tokens = useTacticStore((s) => s.project.tokens);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -95,6 +97,20 @@ export default function Toolbar({ isPlaying, canUndo, canRedo, onUndo, onRedo, s
           overflowX: "auto",
         }}
       >
+        {/* Back button + project name */}
+        {onBack && (
+          <button style={{ ...btnBase, padding: "0 8px" }} onClick={onBack}>
+            ←
+          </button>
+        )}
+        {projectName && (
+          <span style={{ fontSize: 13, color: "#a1a1aa", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 140 }}>
+            {projectName}
+          </span>
+        )}
+
+        {onBack && <div style={{ width: 1, height: 20, background: "#3a3a3a" }} />}
+
         {/* Add tokens */}
         <button
           style={{ ...btnBase, borderColor: HOME_COLOR, color: HOME_COLOR }}

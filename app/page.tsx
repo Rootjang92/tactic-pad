@@ -1,184 +1,104 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from "react";
-import dynamic from "next/dynamic";
-import { useCanvasSize } from "@/hooks/useCanvasSize";
-import { usePlayback } from "@/hooks/usePlayback";
-import { useAutoSave } from "@/hooks/useAutoSave";
-import { useTacticStore } from "@/stores/useTacticStore";
-import Toolbar from "@/components/controls/Toolbar";
-import Timeline from "@/components/timeline/Timeline";
-import Toast from "@/components/Toast";
-import { LABELS, APP_BG } from "@/lib/constants";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useProjects } from "@/hooks/useProjects";
 import { migrateFromLocalStorage } from "@/lib/migration";
-import { getAllProjects } from "@/lib/db";
-
-const TacticBoard = dynamic(() => import("@/components/board/TacticBoard"), {
-  ssr: false,
-  loading: () => (
-    <div
-      style={{
-        flex: 1,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: APP_BG,
-      }}
-    >
-      <div
-        style={{
-          width: "80%",
-          aspectRatio: "1.2",
-          background: "#2d8a4e22",
-          borderRadius: 4,
-          border: "2px dashed #3a3a3a",
-        }}
-      />
-    </div>
-  ),
-});
+import { createProject, duplicateProject, renameProject, removeProject } from "@/lib/project-actions";
+import ProjectList from "@/components/projects/ProjectList";
+import { APP_BG, TOOLBAR_HEIGHT, TOOLBAR_BG } from "@/lib/constants";
 
 export default function Home() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const { width, height } = useCanvasSize(containerRef);
-  const playback = usePlayback();
-  const saveStatus = useAutoSave();
-  const undo = useTacticStore((s) => s.undo);
-  const redo = useTacticStore((s) => s.redo);
-  const undoStack = useTacticStore((s) => s.undoStack);
-  const redoStack = useTacticStore((s) => s.redoStack);
-  const selectedTokenId = useTacticStore((s) => s.selectedTokenId);
-  const dispatch = useTacticStore((s) => s.dispatch);
+  const router = useRouter();
+  const { projects, isLoading, refresh } = useProjects();
+  const [migrated, setMigrated] = useState(false);
 
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [showTooltip, setShowTooltip] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return !localStorage.getItem("tacticpad-tooltip-seen");
-  });
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  // IndexedDB에서 프로젝트 로드 (마이그레이션 포함)
+  // 첫 로드 시 마이그레이션 실행
   useEffect(() => {
     (async () => {
-      try {
-        await migrateFromLocalStorage();
-        const projects = await getAllProjects();
-        if (projects.length > 0) {
-          useTacticStore.getState().loadProject(projects[0]);
-        }
-      } catch (e) {
-        console.error("Failed to load from IndexedDB:", e);
-      } finally {
-        setIsLoaded(true);
-      }
+      await migrateFromLocalStorage();
+      setMigrated(true);
+      refresh();
     })();
-  }, []);
+  }, [refresh]);
 
-  // First-run tooltip auto-hide
-  useEffect(() => {
-    if (!showTooltip) return;
-    const timer = setTimeout(() => {
-      setShowTooltip(false);
-      localStorage.setItem("tacticpad-tooltip-seen", "1");
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, [showTooltip]);
+  const handleOpen = (id: string) => {
+    router.push(`/project/${id}`);
+  };
 
-  // Keyboard shortcuts
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === "z" && (e.ctrlKey || e.metaKey) && e.shiftKey) {
-        e.preventDefault();
-        redo();
-      } else if (e.key === "z" && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault();
-        undo();
-      } else if (e.key === " ") {
-        e.preventDefault();
-        if (playback.isPlaying) playback.pause();
-        else playback.play();
-      } else if (e.key === "Delete" || e.key === "Backspace") {
-        if (selectedTokenId && !playback.isPlaying) {
-          dispatch({ type: "REMOVE_TOKEN", tokenId: selectedTokenId });
-        }
-      }
-    },
-    [undo, redo, playback, selectedTokenId, dispatch],
-  );
+  const handleCreate = async () => {
+    const project = await createProject();
+    router.push(`/project/${project.id}`);
+  };
 
-  useEffect(() => {
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyDown]);
+  const handleDuplicate = async (id: string) => {
+    await duplicateProject(id);
+    refresh();
+  };
+
+  const handleRename = async (id: string, name: string) => {
+    await renameProject(id, name);
+    refresh();
+  };
+
+  const handleDelete = async (id: string) => {
+    await removeProject(id);
+    refresh();
+  };
+
+  if (!migrated || isLoading) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: APP_BG }}>
+        <span style={{ color: "#71717a", fontSize: 14 }}>로딩 중...</span>
+      </div>
+    );
+  }
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100vh",
-        background: APP_BG,
-        overflow: "hidden",
-      }}
-    >
-      {/* Toolbar */}
-      <Toolbar
-        isPlaying={playback.isPlaying}
-        canUndo={undoStack.length > 0}
-        canRedo={redoStack.length > 0}
-        onUndo={undo}
-        onRedo={redo}
-        saveStatus={saveStatus}
-      />
-
-      {/* Canvas container */}
+    <div style={{ minHeight: "100vh", background: APP_BG }}>
+      {/* 헤더 */}
       <div
-        ref={containerRef}
         style={{
-          flex: 1,
+          height: TOOLBAR_HEIGHT,
+          background: TOOLBAR_BG,
           display: "flex",
           alignItems: "center",
-          justifyContent: "center",
-          overflow: "hidden",
-          position: "relative",
+          padding: "0 20px",
+          borderBottom: "1px solid #3a3a3a",
+          gap: 12,
         }}
       >
-        {width > 0 && height > 0 && (
-          <TacticBoard
-            width={width}
-            height={height}
-            isPlaying={playback.isPlaying}
-            interpolatedPositions={playback.interpolatedPositions}
-          />
-        )}
+        <span style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>TacticPad</span>
+        <span style={{ fontSize: 12, color: "#71717a" }}>전술 보드</span>
+      </div>
 
-        {/* First-run tooltip */}
-        {showTooltip && (
-          <div
-            style={{
-              position: "absolute",
-              bottom: 16,
-              left: "50%",
-              transform: "translateX(-50%)",
-              background: "rgba(0,0,0,0.75)",
-              color: "#a1a1aa",
-              padding: "8px 16px",
-              borderRadius: 8,
-              fontSize: 13,
-              pointerEvents: "none",
-              transition: "opacity 500ms",
-            }}
-          >
-            {LABELS.firstRunTooltip}
+      {/* 프로젝트 목록 */}
+      <div style={{ maxWidth: 960, margin: "0 auto", padding: "24px 20px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <h1 style={{ fontSize: 18, fontWeight: 600, color: "#fff", margin: 0 }}>
+            내 전술
+            <span style={{ fontSize: 13, color: "#71717a", fontWeight: 400, marginLeft: 8 }}>
+              {projects.length}개
+            </span>
+          </h1>
+        </div>
+
+        <ProjectList
+          projects={projects}
+          onOpen={handleOpen}
+          onCreate={handleCreate}
+          onDuplicate={handleDuplicate}
+          onRename={handleRename}
+          onDelete={handleDelete}
+        />
+
+        {projects.length === 0 && (
+          <div style={{ textAlign: "center", marginTop: 60, color: "#52525b" }}>
+            <p style={{ fontSize: 14, marginBottom: 8 }}>아직 전술이 없습니다</p>
+            <p style={{ fontSize: 13 }}>위의 + 버튼으로 새 전술을 만들어보세요</p>
           </div>
         )}
       </div>
-
-      {/* Timeline */}
-      <Timeline playback={playback} />
-
-      {/* Toast */}
-      {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage(null)} />}
     </div>
   );
 }
