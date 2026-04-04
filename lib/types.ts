@@ -18,11 +18,57 @@ export interface TacticProject {
   updatedAt: string;
   tokens: Token[];
   keyframes: Keyframe[];
+  // Phase 3 추가
+  folderId: string | null;
+  teamId: string | null;
+  userId: string | null;     // null = 게스트 로컬 전용
+  syncStatus: SyncStatus;
+  deletedAt: string | null;  // soft delete
 }
 
 export interface Position {
   x: number; // normalized 0-1
   y: number; // normalized 0-1
+}
+
+export type SyncStatus = 'synced' | 'pending' | 'conflict' | 'local-only';
+
+export interface Folder {
+  id: string;
+  name: string;
+  parentId: string | null;   // 1-depth만 지원
+  userId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  syncStatus: SyncStatus;
+}
+
+export interface Team {
+  id: string;
+  name: string;              // "서울 FC U-18"
+  formation: string;         // "4-4-2", "4-3-3" 등
+  players: TeamPlayer[];
+  userId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  syncStatus: SyncStatus;
+}
+
+export interface TeamPlayer {
+  number: number;            // 등번호
+  name: string;              // "김민수"
+  position: string;          // "GK", "CB", "ST" 등
+}
+
+export interface SyncQueueItem {
+  id: string;
+  table: 'projects' | 'folders' | 'teams';
+  recordId: string;
+  operation: 'upsert' | 'delete';
+  payload: unknown;
+  timestamp: string;         // ISO 8601
+  retryCount: number;
+  status: 'pending' | 'in-flight' | 'failed';
 }
 
 export interface ProjectState {

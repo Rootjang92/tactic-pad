@@ -1,30 +1,40 @@
 import { useEffect, useRef, useState } from "react";
 import { useTacticStore } from "@/stores/useTacticStore";
+import { saveProject } from "@/lib/db";
 
 export function useAutoSave() {
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fadeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevUpdatedAt = useRef<string>("");
 
   useEffect(() => {
     const unsub = useTacticStore.subscribe((state) => {
-      const updatedAt = state.project.updatedAt;
-      if (updatedAt === prevUpdatedAt.current) return;
-      prevUpdatedAt.current = updatedAt;
+      const { project } = state;
+      if (project.updatedAt === prevUpdatedAt.current) return;
+      prevUpdatedAt.current = project.updatedAt;
 
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
       if (fadeRef.current) clearTimeout(fadeRef.current);
 
-      timeoutRef.current = setTimeout(() => {
-        setSaveStatus("saved");
-        fadeRef.current = setTimeout(() => setSaveStatus("idle"), 1500);
+      setSaveStatus("saving");
+
+      // 500ms debounce → IndexedDB 저장
+      debounceRef.current = setTimeout(async () => {
+        try {
+          await saveProject(project);
+          setSaveStatus("saved");
+          fadeRef.current = setTimeout(() => setSaveStatus("idle"), 1500);
+        } catch (e) {
+          console.error("IndexedDB save failed:", e);
+          setSaveStatus("error");
+        }
       }, 500);
     });
 
     return () => {
       unsub();
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
       if (fadeRef.current) clearTimeout(fadeRef.current);
     };
   }, []);

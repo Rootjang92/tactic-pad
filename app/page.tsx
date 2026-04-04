@@ -10,11 +10,8 @@ import Toolbar from "@/components/controls/Toolbar";
 import Timeline from "@/components/timeline/Timeline";
 import Toast from "@/components/Toast";
 import { LABELS, APP_BG } from "@/lib/constants";
-
-// Hydrate zustand persist store on client mount
-if (typeof window !== "undefined") {
-  useTacticStore.persist.rehydrate();
-}
+import { migrateFromLocalStorage } from "@/lib/migration";
+import { getAllProjects } from "@/lib/db";
 
 const TacticBoard = dynamic(() => import("@/components/board/TacticBoard"), {
   ssr: false,
@@ -53,11 +50,29 @@ export default function Home() {
   const selectedTokenId = useTacticStore((s) => s.selectedTokenId);
   const dispatch = useTacticStore((s) => s.dispatch);
 
+  const [isLoaded, setIsLoaded] = useState(false);
   const [showTooltip, setShowTooltip] = useState(() => {
     if (typeof window === "undefined") return false;
     return !localStorage.getItem("tacticpad-tooltip-seen");
   });
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // IndexedDB에서 프로젝트 로드 (마이그레이션 포함)
+  useEffect(() => {
+    (async () => {
+      try {
+        await migrateFromLocalStorage();
+        const projects = await getAllProjects();
+        if (projects.length > 0) {
+          useTacticStore.getState().loadProject(projects[0]);
+        }
+      } catch (e) {
+        console.error("Failed to load from IndexedDB:", e);
+      } finally {
+        setIsLoaded(true);
+      }
+    })();
+  }, []);
 
   // First-run tooltip auto-hide
   useEffect(() => {

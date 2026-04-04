@@ -94,9 +94,8 @@ const DEFAULT_FORMATION: { number: number; position: Position }[] = [
 
 const BALL_DEFAULT_POSITION: Position = { x: 0.5, y: 0.85 }; // center circle area
 
-let idCounter = 0;
 export function generateId(): string {
-  return `${Date.now()}-${++idCounter}`;
+  return crypto.randomUUID();
 }
 
 export function createDefaultProject(): TacticProject {
@@ -134,5 +133,10 @@ export function createDefaultProject(): TacticProject {
     updatedAt: new Date().toISOString(),
     tokens,
     keyframes: [keyframe],
+    folderId: null,
+    teamId: null,
+    userId: null,
+    syncStatus: 'local-only' as const,
+    deletedAt: null,
   };
 }

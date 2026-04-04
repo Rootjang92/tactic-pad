@@ -19,7 +19,7 @@ interface ToolbarProps {
   canRedo: boolean;
   onUndo: () => void;
   onRedo: () => void;
-  saveStatus: "idle" | "saved" | "error";
+  saveStatus: "idle" | "saving" | "saved" | "error";
 }
 
 export default function Toolbar({ isPlaying, canUndo, canRedo, onUndo, onRedo, saveStatus }: ToolbarProps) {

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useTacticStore } from '@/stores/useTacticStore';
 import { createDefaultProject, generateId, MAX_KEYFRAMES, MAX_TOKENS } from '@/lib/constants';
-import type { Token, Position } from '@/lib/types';
+import type { Token, Position, TacticProject } from '@/lib/types';
 
 beforeEach(() => {
   // Reset store to default state before each test
@@ -25,6 +25,15 @@ describe('tacticStore', () => {
     expect(project.keyframes).toHaveLength(1);
     expect(project.tokens.filter((t) => t.type === 'player')).toHaveLength(11);
     expect(project.tokens.filter((t) => t.type === 'ball')).toHaveLength(1);
+  });
+
+  it('default project has Phase 3 fields', () => {
+    const { project } = getState();
+    expect(project.folderId).toBeNull();
+    expect(project.teamId).toBeNull();
+    expect(project.userId).toBeNull();
+    expect(project.syncStatus).toBe('local-only');
+    expect(project.deletedAt).toBeNull();
   });
 
   it('MOVE_TOKEN updates position in current keyframe', () => {
@@ -193,5 +202,42 @@ describe('undo/redo', () => {
     getState().undo();
     expect(getState().undoStack).toHaveLength(0);
     expect(getState().redoStack.length).toBeGreaterThan(0);
+  });
+});
+
+describe('loadProject', () => {
+  it('loads project and resets undo/redo stacks', () => {
+    const tokenId = getState().project.tokens[0].id;
+    getState().dispatch({ type: 'MOVE_TOKEN', tokenId, position: { x: 0.9, y: 0.9 } });
+    expect(getState().undoStack.length).toBeGreaterThan(0);
+
+    const newProject = createDefaultProject();
+    newProject.name = '로드된 프로젝트';
+    getState().loadProject(newProject);
+
+    expect(getState().project.name).toBe('로드된 프로젝트');
+    expect(getState().currentKeyframeIndex).toBe(0);
+    expect(getState().selectedTokenId).toBeNull();
+    expect(getState().undoStack).toHaveLength(0);
+    expect(getState().redoStack).toHaveLength(0);
+  });
+
+  it('loadProject via dispatch also resets stacks', () => {
+    const tokenId = getState().project.tokens[0].id;
+    getState().dispatch({ type: 'MOVE_TOKEN', tokenId, position: { x: 0.9, y: 0.9 } });
+
+    const newProject = createDefaultProject();
+    getState().dispatch({ type: 'LOAD_PROJECT', project: newProject });
+
+    // LOAD_PROJECT via dispatch does not track in undo
+    expect(getState().project.id).toBe(newProject.id);
+    expect(getState().currentKeyframeIndex).toBe(0);
+    expect(getState().selectedTokenId).toBeNull();
+  });
+
+  it('project ID uses UUID format', () => {
+    const { project } = getState();
+    // UUID v4 format: 8-4-4-4-12 hex characters
+    expect(project.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
   });
 });

@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import type { ProjectState, ProjectAction, TacticProject, Keyframe } from '@/lib/types';
 import { generateId, createDefaultProject, MAX_KEYFRAMES, MAX_TOKENS, MAX_UNDO_HISTORY } from '@/lib/constants';
 
@@ -12,6 +11,7 @@ interface TacticStore extends ProjectState {
   dispatch: (action: ProjectAction) => void;
   undo: () => void;
   redo: () => void;
+  loadProject: (project: TacticProject) => void;
 }
 
 function applyAction(state: ProjectState, action: ProjectAction): ProjectState {
@@ -122,69 +122,69 @@ function getProjectState(store: TacticStore): ProjectState {
 }
 
 export const useTacticStore = create<TacticStore>()(
-  persist(
-    (set, get) => {
-      const defaultProject = createDefaultProject();
-      return {
-        // state
-        project: defaultProject,
-        currentKeyframeIndex: 0,
-        selectedTokenId: null,
-        undoStack: [],
-        redoStack: [],
+  (set, get) => {
+    const defaultProject = createDefaultProject();
+    return {
+      // state
+      project: defaultProject,
+      currentKeyframeIndex: 0,
+      selectedTokenId: null,
+      undoStack: [],
+      redoStack: [],
 
-        dispatch: (action: ProjectAction) => {
-          const store = get();
-          const current = getProjectState(store);
-          const next = applyAction(current, action);
+      dispatch: (action: ProjectAction) => {
+        const store = get();
+        const current = getProjectState(store);
+        const next = applyAction(current, action);
 
-          // Don't track selection/navigation/load in undo
-          const trackable = action.type !== 'SELECT_TOKEN'
-            && action.type !== 'SELECT_KEYFRAME'
-            && action.type !== 'LOAD_PROJECT';
+        // Don't track selection/navigation/load in undo
+        const trackable = action.type !== 'SELECT_TOKEN'
+          && action.type !== 'SELECT_KEYFRAME'
+          && action.type !== 'LOAD_PROJECT';
 
-          if (trackable) {
-            const undoStack = [...store.undoStack, current];
-            set({
-              ...next,
-              undoStack: undoStack.length > MAX_UNDO_HISTORY ? undoStack.slice(-MAX_UNDO_HISTORY) : undoStack,
-              redoStack: [],
-            });
-          } else {
-            set(next);
-          }
-        },
-
-        undo: () => {
-          const store = get();
-          if (store.undoStack.length === 0) return;
-          const prev = store.undoStack[store.undoStack.length - 1];
-          set({
-            ...prev,
-            undoStack: store.undoStack.slice(0, -1),
-            redoStack: [...store.redoStack, getProjectState(store)],
-          });
-        },
-
-        redo: () => {
-          const store = get();
-          if (store.redoStack.length === 0) return;
-          const next = store.redoStack[store.redoStack.length - 1];
+        if (trackable) {
+          const undoStack = [...store.undoStack, current];
           set({
             ...next,
-            undoStack: [...store.undoStack, getProjectState(store)],
-            redoStack: store.redoStack.slice(0, -1),
+            undoStack: undoStack.length > MAX_UNDO_HISTORY ? undoStack.slice(-MAX_UNDO_HISTORY) : undoStack,
+            redoStack: [],
           });
-        },
-      };
-    },
-    {
-      name: 'tacticpad-project',
-      partialize: (state) => ({
-        project: state.project,
-        currentKeyframeIndex: state.currentKeyframeIndex,
-      }),
-      skipHydration: true,
-    }
-  )
+        } else {
+          set(next);
+        }
+      },
+
+      loadProject: (project: TacticProject) => {
+        set({
+          project,
+          currentKeyframeIndex: 0,
+          selectedTokenId: null,
+          undoStack: [],
+          redoStack: [],
+        });
+      },
+
+      undo: () => {
+        const store = get();
+        if (store.undoStack.length === 0) return;
+        const prev = store.undoStack[store.undoStack.length - 1];
+        set({
+          ...prev,
+          undoStack: store.undoStack.slice(0, -1),
+          redoStack: [...store.redoStack, getProjectState(store)],
+        });
+      },
+
+      redo: () => {
+        const store = get();
+        if (store.redoStack.length === 0) return;
+        const next = store.redoStack[store.redoStack.length - 1];
+        set({
+          ...next,
+          undoStack: [...store.undoStack, getProjectState(store)],
+          redoStack: store.redoStack.slice(0, -1),
+        });
+      },
+    };
+  }
 );
