@@ -115,14 +115,6 @@ export default function ProjectPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
-  if (!isLoaded) {
-    return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: APP_BG }}>
-        <span style={{ color: "#71717a", fontSize: 14 }}>로딩 중...</span>
-      </div>
-    );
-  }
-
   return (
     <div
       style={{
@@ -141,11 +133,11 @@ export default function ProjectPage() {
         onUndo={undo}
         onRedo={redo}
         saveStatus={saveStatus}
-        projectName={useTacticStore.getState().project.name}
+        projectName={isLoaded ? useTacticStore.getState().project.name : undefined}
         onBack={() => router.push("/")}
       />
 
-      {/* Canvas container */}
+      {/* Canvas container — 항상 렌더하여 containerRef 유지 */}
       <div
         ref={containerRef}
         style={{
@@ -157,34 +149,40 @@ export default function ProjectPage() {
           position: "relative",
         }}
       >
-        {width > 0 && height > 0 && (
-          <TacticBoard
-            width={width}
-            height={height}
-            isPlaying={playback.isPlaying}
-            interpolatedPositions={playback.interpolatedPositions}
-          />
-        )}
+        {!isLoaded ? (
+          <span style={{ color: "#71717a", fontSize: 14 }}>로딩 중...</span>
+        ) : (
+          <>
+            {width > 0 && height > 0 && (
+              <TacticBoard
+                width={width}
+                height={height}
+                isPlaying={playback.isPlaying}
+                interpolatedPositions={playback.interpolatedPositions}
+              />
+            )}
 
-        {/* First-run tooltip */}
-        {showTooltip && (
-          <div
-            style={{
-              position: "absolute",
-              bottom: 16,
-              left: "50%",
-              transform: "translateX(-50%)",
-              background: "rgba(0,0,0,0.75)",
-              color: "#a1a1aa",
-              padding: "8px 16px",
-              borderRadius: 8,
-              fontSize: 13,
-              pointerEvents: "none",
-              transition: "opacity 500ms",
-            }}
-          >
-            {LABELS.firstRunTooltip}
-          </div>
+            {/* First-run tooltip */}
+            {showTooltip && (
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: 16,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  background: "rgba(0,0,0,0.75)",
+                  color: "#a1a1aa",
+                  padding: "8px 16px",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  pointerEvents: "none",
+                  transition: "opacity 500ms",
+                }}
+              >
+                {LABELS.firstRunTooltip}
+              </div>
+            )}
+          </>
         )}
       </div>
 
