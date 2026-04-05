@@ -33,14 +33,23 @@ export default function ProjectCard({ project, onOpen, onDuplicate, onRename, on
   };
 
   return (
+    <>
+    {/* 메뉴 바깥 클릭 시 닫기 */}
+    {showMenu && (
+      <div
+        style={{ position: "fixed", inset: 0, zIndex: 20 }}
+        onClick={() => setShowMenu(false)}
+      />
+    )}
     <div
       style={{
         background: "#242424",
         borderRadius: 12,
         border: "1px solid #3a3a3a",
-        overflow: "hidden",
         cursor: "pointer",
         transition: "border-color 150ms",
+        position: "relative",
+        zIndex: showMenu ? 21 : undefined,
       }}
       onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#525252")}
       onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#3a3a3a")}
@@ -53,6 +62,8 @@ export default function ProjectCard({ project, onOpen, onDuplicate, onRename, on
           background: FIELD_GREEN,
           position: "relative",
           borderBottom: "1px solid #3a3a3a",
+          borderRadius: "12px 12px 0 0",
+          overflow: "hidden",
         }}
       >
         {/* 토큰 미리보기 점 */}
@@ -148,7 +159,7 @@ export default function ProjectCard({ project, onOpen, onDuplicate, onRename, on
                   border: "1px solid #3a3a3a",
                   borderRadius: 8,
                   padding: 4,
-                  zIndex: 10,
+                  zIndex: 22,
                   minWidth: 120,
                 }}
                 onClick={(e) => e.stopPropagation()}
@@ -170,14 +181,8 @@ export default function ProjectCard({ project, onOpen, onDuplicate, onRename, on
         </div>
       </div>
 
-      {/* 메뉴 바깥 클릭 시 닫기 */}
-      {showMenu && (
-        <div
-          style={{ position: "fixed", inset: 0, zIndex: 5 }}
-          onClick={() => setShowMenu(false)}
-        />
-      )}
     </div>
+    </>
   );
 }
 
