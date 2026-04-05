@@ -9,7 +9,6 @@ import { useAutoSave } from "@/hooks/useAutoSave";
 import { useTacticStore } from "@/stores/useTacticStore";
 import Toolbar from "@/components/controls/Toolbar";
 import Timeline from "@/components/timeline/Timeline";
-import Toast from "@/components/Toast";
 import { LABELS, APP_BG } from "@/lib/constants";
 import { getProject } from "@/lib/db";
 
@@ -50,6 +49,7 @@ export default function ProjectPage() {
   const undoStack = useTacticStore((s) => s.undoStack);
   const redoStack = useTacticStore((s) => s.redoStack);
   const selectedTokenId = useTacticStore((s) => s.selectedTokenId);
+  const projectName = useTacticStore((s) => s.project.name);
   const dispatch = useTacticStore((s) => s.dispatch);
 
   const [isLoaded, setIsLoaded] = useState(false);
@@ -57,8 +57,6 @@ export default function ProjectPage() {
     if (typeof window === "undefined") return false;
     return !localStorage.getItem("tacticpad-tooltip-seen");
   });
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
   // IndexedDB에서 프로젝트 로드
   useEffect(() => {
     if (!params.id) return;
@@ -133,7 +131,7 @@ export default function ProjectPage() {
         onUndo={undo}
         onRedo={redo}
         saveStatus={saveStatus}
-        projectName={isLoaded ? useTacticStore.getState().project.name : undefined}
+        projectName={isLoaded ? projectName : undefined}
         onBack={() => router.push("/")}
       />
 
@@ -189,8 +187,6 @@ export default function ProjectPage() {
       {/* Timeline */}
       <Timeline playback={playback} />
 
-      {/* Toast */}
-      {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage(null)} />}
     </div>
   );
 }
